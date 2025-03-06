@@ -48,6 +48,9 @@ function gsl_documentos_relacionados_producto_shortcode($atts)
 
             // Construir el HTML para cada documento
             $output .= '<div class="gsl-documento-box">';
+            // Obtener la URL del ícono usando plugin_dir_url() y la ruta relativa al directorio principal del plugin
+            $icon_svg_url = plugin_dir_url(dirname(__FILE__)) . 'assets/docs/pdfIconVector.svg';
+            $output .= '<img src="' . esc_url($icon_svg_url) . '" alt="Ícono PDF" class="documento-icono">';
             $output .= '<a href="' . esc_url($archivo_url) . '" class="documento-link" target="_blank">';
             $output .= '<h3 class="documento-titulo">' . esc_html($titulo) . '</h3>';
             $output .= '<div class="documento-meta">';
@@ -108,9 +111,6 @@ function gsl_datos_producto_shortcode($atts)
     $marca = wp_get_post_terms($post->ID, 'marca', ['fields' => 'names']);
     $marca_text = !empty($marca) ? esc_html(implode(', ', $marca)) : __('NA', 'gsl');
 
-    $modelo = get_post_meta($post->ID, '_gsl_producto_modelo', true);
-    $modelo_text = $modelo ? esc_html($modelo) : __('NA', 'gsl');
-
     $codigo = get_post_meta($post->ID, '_gsl_producto_codigo', true);
     $codigo_text = $codigo ? esc_html($codigo) : __('NA', 'gsl');
 
@@ -118,7 +118,6 @@ function gsl_datos_producto_shortcode($atts)
         <div class="gsl-datos-producto-texto">
             <p><strong>' . __('Producto:', 'gsl') . '</strong> ' . esc_html($titulo) . '</p>
             <p><strong>' . __('Marca:', 'gsl') . '</strong> ' . $marca_text . '</p>
-            <p><strong>' . __('Modelo:', 'gsl') . '</strong> ' . $modelo_text . '</p>
             <p><strong>' . __('Código:', 'gsl') . '</strong> ' . $codigo_text . '</p>
         </div>
     ';
@@ -126,79 +125,146 @@ function gsl_datos_producto_shortcode($atts)
 add_shortcode('gsl_datos_producto', 'gsl_datos_producto_shortcode');
 
 //-------------------------------------------------------
-// Listar productos relacionados con el cliente logueado
+// Modificar cláusula WHERE de WP_Query para búsqueda
 //-------------------------------------------------------
-function gsl_productos_relacionados_cliente_shortcode($atts)
-{
-    if (!is_user_logged_in()) {
-        return '<p>' . __('Debes estar logueado para ver tus productos relacionados.', 'gsl') . '</p>';
+function gsl_productos_search_where( $search, $wp_query ) {
+    global $wpdb;
+    $custom_search = $wp_query->get('gsl_search');
+    if ( $custom_search ) {
+        $search_term = esc_sql( $wpdb->esc_like( $custom_search ) );
+        $search = " AND (
+            ({$wpdb->posts}.post_title LIKE '%{$search_term}%')
+            OR ({$wpdb->posts}.post_content LIKE '%{$search_term}%')
+            OR EXISTS (
+                SELECT * FROM {$wpdb->postmeta} pm
+                WHERE pm.post_id = {$wpdb->posts}.ID
+                AND pm.meta_key IN ('_gsl_producto_modelo', '_gsl_producto_codigo')
+                AND pm.meta_value LIKE '%{$search_term}%'
+            )
+            OR EXISTS (
+                SELECT * FROM {$wpdb->term_relationships} tr
+                INNER JOIN {$wpdb->term_taxonomy} tt ON tr.term_taxonomy_id = tt.term_taxonomy_id
+                INNER JOIN {$wpdb->terms} t ON t.term_id = tt.term_id
+                WHERE tr.object_id = {$wpdb->posts}.ID
+                AND tt.taxonomy = 'marca'
+                AND t.name LIKE '%{$search_term}%'
+            )
+        )";
+    }
+    return $search;
+}
+
+//-------------------------------------------------------
+// Listar productos relacionados  cliente logueado con búsqueda y paginación
+//-------------------------------------------------------
+function gsl_productos_relacionados_cliente_shortcode($atts) {
+    if ( ! is_user_logged_in() ) {
+        return '<p>' . __( 'Debes estar logueado para ver tus productos relacionados.', 'gsl' ) . '</p>';
     }
 
     $current_user = wp_get_current_user();
-    /*
-    if (!in_array('cliente', $current_user->roles)) {
-        return '<p>' . __('No tienes permisos para ver esta información.', 'gsl') . '</p>';
-    }
-    */
 
-    $query = new WP_Query([
-        'post_type' => 'producto',
-        'meta_query' => [
-            [
-                'key' => 'gsl_cliente_relacionado',
-                'value' => $current_user->ID,
+    // Recuperar el valor de búsqueda (por GET)
+    $search_query = isset( $_GET['gsl_search'] ) ? sanitize_text_field( $_GET['gsl_search'] ) : '';
+
+    // Formulario de búsqueda
+    $form  = '<form method="GET" class="gsl-productos-search-form">';
+    $form .= '<input type="text" name="gsl_search" placeholder="' . __( 'Buscar producto...', 'gsl' ) . '" value="' . esc_attr( $search_query ) . '" />';
+    $form .= '<button type="submit">' . __( 'Filtrar', 'gsl' ) . '</button>';
+    if ( $search_query ) {
+         $form .= ' <a href="' . esc_url( remove_query_arg( 'gsl_search' ) ) . '">' . __( 'Limpiar filtros', 'gsl' ) . '</a>';
+    }
+    $form .= '</form>';
+
+    // Paginación: obtener la página actual (por defecto 1)
+    $paged = ( get_query_var('paged') ) ? get_query_var('paged') : 1;
+
+    // Construir argumentos para WP_Query
+    $query_args = array(
+        'post_type'      => 'producto',
+        'posts_per_page' => 9, // ajusta el número de productos por página según necesites
+        'paged'          => $paged,
+        'meta_query'     => array(
+            array(
+                'key'     => 'gsl_cliente_relacionado',
+                'value'   => $current_user->ID,
                 'compare' => '='
-            ]
-        ]
-    ]);
+            )
+        )
+    );
 
-
-    if (!$query->have_posts()) {
-        return '<p>' . __('No tienes productos relacionados.', 'gsl') . '</p>';
+    // Agregar búsqueda personalizada si se ingresó un término
+    if ( ! empty( $search_query ) ) {
+         $query_args['gsl_search'] = $search_query;
+         add_filter( 'posts_search', 'gsl_productos_search_where', 10, 2 );
     }
 
-    // Contenedor principal de boxes
-    $output = '<div class="gsl-productos-relacionados-boxes">';
+    $query = new WP_Query( $query_args );
 
-    while ($query->have_posts()) {
-        $query->the_post();
+    $output = $form;
 
-        $post_id    = get_the_ID();
-        $titulo     = get_the_title();
-        $permalink  = get_permalink();
+    if ( ! $query->have_posts() ) {
+        $output .= '<p>' . __( 'No tienes productos relacionados.', 'gsl' ) . '</p>';
+    } else {
+        $output .= '<div class="gsl-productos-relacionados-boxes">';
+        while ( $query->have_posts() ) {
+            $query->the_post();
+            $post_id   = get_the_ID();
+            $titulo    = get_the_title();
+            $permalink = get_permalink();
 
-        // Obtener la imagen destacada del producto (tamaño "medium" o el que desees)
-        $imagen = get_the_post_thumbnail($post_id, 'medium');
+            // Imagen destacada (tamaño "medium")
+            $imagen = get_the_post_thumbnail( $post_id, 'medium' );
 
-        // Obtener la marca del producto (se asume que está en la taxonomía "marca")
-        $marca = wp_get_post_terms($post_id, 'marca', ['fields' => 'names']);
-        $marca_text = !empty($marca) ? esc_html(implode(', ', $marca)) : __('Sin marca', 'gsl');
+            // Obtener la marca (taxonomía "marca")
+            $marca = wp_get_post_terms( $post_id, 'marca', array( 'fields' => 'names' ) );
+            $marca_text = ! empty( $marca ) ? esc_html( implode( ', ', $marca ) ) : __( 'Sin marca', 'gsl' );
 
-        // Obtener el modelo del producto (desde el meta campo '_gsl_producto_modelo')
-        $modelo = get_post_meta($post_id, '_gsl_producto_modelo', true);
-        $modelo_text = $modelo ? esc_html($modelo) : __('Sin modelo', 'gsl');
+            // Obtener el código (meta campo "_gsl_producto_codigo")
+            $codigo = get_post_meta( $post_id, '_gsl_producto_codigo', true );
+            $codigo_text = $codigo ? esc_html( $codigo ) : __( 'NA', 'gsl' );
 
-        // Armamos el HTML para cada box
-        $output .= '<div class="gsl-producto-box">';
-        // Imagen del producto
-        $output .= '<div class="gsl-producto-imagen">' . $imagen . '</div>';
-        // Detalles del producto
-        $output .= '<div class="gsl-producto-detalle">';
-        $output .= '<p><strong>' . __('Producto:', 'gsl') . '</strong> ' . $titulo . '</p>';
-        $output .= '<p><strong>' . __('Marca:', 'gsl') . '</strong> ' . $marca_text . '</p>';
-        $output .= '<p><strong>' . __('Modelo:', 'gsl') . '</strong> ' . $modelo_text . '</p>';
-        // Botón para ver el producto
-        $output .= '<a href="' . $permalink . '" class="button gsl-ver-producto" target="_blank">' . __('Ver Producto', 'gsl') . '</a>';
+            // Construir el HTML para cada producto
+            $output .= '<div class="gsl-producto-box">';
+            $output .= '<div class="gsl-producto-imagen">' . $imagen . '</div>';
+            $output .= '<div class="gsl-producto-detalle">';
+            $output .= '<p><strong>' . __( 'Producto:', 'gsl' ) . '</strong> ' . $titulo . '</p>';
+            $output .= '<p><strong>' . __( 'Marca:', 'gsl' ) . '</strong> ' . $marca_text . '</p>';
+            $output .= '<p><strong>' . __( 'Código:', 'gsl' ) . '</strong> ' . $codigo_text . '</p>';
+            $output .= '<a href="' . $permalink . '" class="button gsl-ver-producto" target="_blank">' . __( 'Ver Producto', 'gsl' ) . '</a>';
+            $output .= '</div>';
+            $output .= '</div>';
+        }
         $output .= '</div>';
-        $output .= '</div>';
+
+        // Paginación
+        $big = 999999999; // número poco probable
+        $pagination = paginate_links( array(
+            'base'      => str_replace( $big, '%#%', esc_url( get_pagenum_link( $big ) ) ),
+            'format'    => '?paged=%#%',
+            'current'   => max( 1, $paged ),
+            'total'     => $query->max_num_pages,
+            'type'      => 'list',
+        ) );
+        if ( $pagination ) {
+            $output .= '<div class="gsl-pagination">' . $pagination . '</div>';
+        }
     }
 
-    $output .= '</div>';
     wp_reset_postdata();
+
+    if ( ! empty( $search_query ) ) {
+         remove_filter( 'posts_search', 'gsl_productos_search_where', 10, 2 );
+    }
 
     return $output;
 }
-add_shortcode('gsl_productos_relacionados', 'gsl_productos_relacionados_cliente_shortcode');
+add_shortcode( 'gsl_productos_relacionados', 'gsl_productos_relacionados_cliente_shortcode' );
+
+
+
+
+
 
 //-------------------------------------------------------
 // Mostrar un documento relacionado al post "documento"
@@ -316,28 +382,61 @@ function gsl_kaya_qrcode_acceso_shortcode($atts)
     $output .= '<div class="gsl-qr-code">' . do_shortcode('[kaya_qrcode]') . '</div>';
     $output .= '<div class="gsl-qr-bottom">';
     $output .= '<div class="gsl-qr-text-column"><p class="gsl-qr-text">AR</p></div>';
-    $output .= '<div class="gsl-qr-image-column"><img class="gsl-qr-icon" src="'.plugin_dir_url( dirname(__FILE__) ) . 'assets/docs/qrbluetics.png' .'" alt="Icono" /></div>';
+    $output .= '<div class="gsl-qr-image-column"><img class="gsl-qr-icon" src="' . plugin_dir_url(dirname(__FILE__)) . 'assets/docs/qrbluetics.png' . '" alt="Icono" /></div>';
     $output .= '</div></div>';
 
-    // Contenedor para botones de descarga (arriba)
+    // Contenedor para descargas
     $output .= '<div class="gsl-qr-download-container">';
+    $output .= '<h3 class="gsl-downloads-title">DESCARGAS</h3>';
 
-    // Primera fila con dos botones
+    // Fila con los 3 botones
     $output .= '<div class="gsl-qr-download-types">';
-    $output .= '<button class="gsl-generate-pdf-btn">' . __('Descargar PDF', 'gsl') . '</button>';
-    $output .= '<button class="gsl-generate-png-btn">' . __('Descargar PNG', 'gsl') . '</button>';
+    $output .= '<button class="gsl-generate-pdf-btn">PDF ↗</button>';
+    $output .= '<button class="gsl-generate-png-btn">PNG ↗</button>';
+    $output .= '<button class="gsl-download-qr-solo-btn">SOLO QR ↗</button>';
     $output .= '</div>';
 
-    // Segunda fila con un solo botón centrado
-    $output .= '<div class="gsl-qr-medidas" style="display: flex; justify-content: center;">';
-    $output .= '<a href="'.plugin_dir_url( dirname(__FILE__) ) . 'assets/docs/QR_Medidas_Ejemplo.pdf' .'" class="gsl-download-qr-ejemplo" target="_blank">';
-    $output .= __('Ejemplo de QR con medidas', 'gsl');
+    // Enlace para ver medidas de ejemplo (debajo)
+    $output .= '<p class="gsl-qr-medidas-link">';
+    $output .= '<a href="' . plugin_dir_url(dirname(__FILE__)) . 'assets/docs/QR_Medidas_Ejemplo.pdf" class="gsl-download-qr-ejemplo" target="_blank">';
+    $output .= __('Ver medidas de ejemplo', 'gsl');
     $output .= '</a>';
-    $output .= '</div>';
-    
+    $output .= '</p>';
 
-    $output .= '</div>'; // Cierre del contenedor principal
+    $output .= '</div>'; // Fin contenedor descargas
 
     return $output;
 }
 add_shortcode('gsl_qrcode', 'gsl_kaya_qrcode_acceso_shortcode');
+
+
+//-------------------------------------------------------
+// Listar modelos relacionados con un producto
+//-------------------------------------------------------
+function gsl_modelos_relacionados_producto_shortcode($atts) {
+    global $post;
+
+    // Se espera que en el producto se guarde un array de modelos en el meta '_gsl_producto_modelo'
+    $modelos = get_post_meta($post->ID, '_gsl_producto_modelo', true);
+
+    if (empty($modelos) || !is_array($modelos)) {
+        return '<div class="gsl-modelos-grid"><p>' . __('No hay modelos asociados a este producto.', 'gsl') . '</p></div>';
+    }
+
+    // Ordenar alfabéticamente los modelos
+    sort($modelos, SORT_STRING);
+
+    $output = '<div class="gsl-modelos-grid">';
+    
+    // Recorrer cada modelo y mostrarlo en un "box"
+    foreach ($modelos as $modelo) {
+        $output .= '<div class="gsl-modelo-box">';
+        $output .= '<p class="gsl-modelo-texto">' . esc_html($modelo) . '</p>';
+        $output .= '</div>';
+    }
+    
+    $output .= '</div>';
+
+    return $output;
+}
+add_shortcode('gsl_modelos_relacionados_producto', 'gsl_modelos_relacionados_producto_shortcode');

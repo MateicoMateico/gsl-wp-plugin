@@ -1,16 +1,29 @@
-
-// Código que se ejecuta para la búsqueda de documento
-
-
+/**********************************************
+ * CÓDIGO PRINCIPAL - BÚSQUEDA DE DOCUMENTOS
+ **********************************************/
 jQuery(document).ready(function($) {
+    // ==============================================
+    // Variables y Configuración Inicial
+    // ==============================================
     var currentPage = 1;
     var searchTimer;
+    const searchInput = $("#gsl-buscar-documentos");
+    const unassignedList = $("#unassigned-list");
+    const assignedList = $("#assigned-list");
 
-    // Función para cargar documentos vía AJAX
+    // ==============================================
+    // Funciones Principales
+    // ==============================================
+    
+    /**
+     * Carga documentos mediante AJAX
+     * @param {number} page - Número de página a cargar
+     * @param {string} query - Término de búsqueda
+     */
     function loadDocumentos(page, query) {
-        // Obtener documentos ya asignados para evitar duplicados
-        var assigned = $("#gsl_documentos_relacionados").val();
-        $("#unassigned-list").html('<li>Cargando...</li>');
+        const assigned = $("#gsl_documentos_relacionados").val();
+        unassignedList.html('<li>Cargando...</li>');
+
         $.ajax({
             url: gsl_vars.ajaxurl,
             type: 'POST',
@@ -24,282 +37,308 @@ jQuery(document).ready(function($) {
             },
             success: function(response) {
                 if (response.success) {
-                    $("#unassigned-list").html(response.data.html);
+                    unassignedList.html(response.data.html);
                     $("#current-page").text(page);
                     
-                    // Actualizar estado de los botones de paginación
-                    if (page >= response.data.max_pages) {
-                        $("#next-page").prop('disabled', true);
-                    } else {
-                        $("#next-page").prop('disabled', false);
-                    }
+                    // Actualizar estado de paginación
+                    $("#next-page").prop('disabled', page >= response.data.max_pages);
                     $("#prev-page").prop('disabled', page <= 1);
                 }
             },
             error: function() {
-                $("#unassigned-list").html('<li>Error al cargar documentos.</li>');
+                unassignedList.html('<li>Error al cargar documentos.</li>');
             }
         });
     }
+
+    // ==============================================
+    // Eventos de Búsqueda y Paginación
+    // ==============================================
     
-    // Cargar la primera página inicialmente sin filtro
-    loadDocumentos(currentPage, '');
-    
-    // Evento de búsqueda con debounce para evitar múltiples llamadas
-    $("#gsl-buscar-documentos").on("input", function() {
+    // Búsqueda con debounce de 300ms
+    searchInput.on("input", function() {
         clearTimeout(searchTimer);
-        searchTimer = setTimeout(function() {
-            var query = $("#gsl-buscar-documentos").val();
+        searchTimer = setTimeout(() => {
             currentPage = 1;
-            loadDocumentos(currentPage, query);
+            loadDocumentos(currentPage, searchInput.val());
         }, 300);
     });
-    
-    // Botón "Siguiente"
+
+    // Navegación entre páginas
     $("#next-page").on("click", function() {
-        var query = $("#gsl-buscar-documentos").val();
         currentPage++;
-        loadDocumentos(currentPage, query);
+        loadDocumentos(currentPage, searchInput.val());
     });
-    
-    // Botón "Anterior"
+
     $("#prev-page").on("click", function() {
         if (currentPage > 1) {
-            var query = $("#gsl-buscar-documentos").val();
             currentPage--;
-            loadDocumentos(currentPage, query);
+            loadDocumentos(currentPage, searchInput.val());
         }
     });
-    
-    // Inicializar sortable en ambas listas
-    $("#unassigned-list, #assigned-list").sortable({
+
+    // ==============================================
+    // Funcionalidad Drag & Drop (Sortable)
+    // ==============================================
+    unassignedList.add(assignedList).sortable({
         connectWith: ".list-box ul",
         placeholder: "ui-state-highlight",
         update: function() {
-            var assigned = [];
-            $("#assigned-list li").each(function() {
-                var id = $(this).data("id");
-                if (id) assigned.push(id);
-            });
-            $("#gsl_documentos_relacionados").val(assigned.join(","));
+            const assignedIds = assignedList.find("li")
+                .map((i, el) => $(el).data("id"))
+                .get()
+                .join(",");
+            $("#gsl_documentos_relacionados").val(assignedIds);
         },
         receive: function(event, ui) {
-            // En la lista de asignados, evitar duplicados
-            if ($(this).attr('id') === 'assigned-list') {
-                var newId = ui.item.data("id");
-                var duplicate = false;
-                $("#assigned-list li").each(function() {
-                    if ($(this).data("id") === newId && this !== ui.item[0]) {
-                        duplicate = true;
-                    }
-                });
-                if (duplicate) {
-                    $(ui.sender).sortable('cancel');
-                }
+            // Evitar duplicados en lista asignada
+            if ($(this).is(assignedList)) {
+                const newId = ui.item.data("id");
+                const isDuplicate = assignedList.find(`li[data-id="${newId}"]`).length > 1;
+                if (isDuplicate) $(ui.sender).sortable('cancel');
             }
         }
     }).disableSelection();
+
+    // ==============================================
+    // Inicialización
+    // ==============================================
+    loadDocumentos(currentPage, '');
 });
 
 
-
-// Código jQuery para el media uploader de archivos y de imagen
+/**********************************************
+ * MEDIA UPLOADERS (ARCHIVOS E IMÁGENES)
+ **********************************************/
 jQuery(document).ready(function($) {
-    // -----------------------------------------------------------
-    // Media uploader para seleccionar archivo (documentos)
-    // -----------------------------------------------------------
-    var frame;
-    
+    // ==============================================
+    // Uploader para Archivos (Documentos)
+    // ==============================================
+    let fileFrame;
+    const fileInput = $('#gsl_documento_attachment_id');
+    const fileInfo = $('#gsl_archivo_info');
+
     $('#gsl_select_archivo').on('click', function(e) {
         e.preventDefault();
-        // Si ya se creó el frame, lo reabre
-        if ( frame ) {
-            frame.open();
+        
+        if (fileFrame) {
+            fileFrame.open();
             return;
         }
-        
-        // Crear el frame del media uploader para archivos
-        frame = wp.media({
+
+        fileFrame = wp.media({
             title: 'Seleccionar archivo',
             button: { text: 'Usar este archivo' },
             multiple: false
         });
-        
-        // Al seleccionar el archivo
-        frame.on('select', function() {
-            var attachment = frame.state().get('selection').first().toJSON();
-            // Actualizar el campo oculto con el attachment ID
-            $('#gsl_documento_attachment_id').val( attachment.id );
+
+        fileFrame.on('select', () => {
+            const attachment = fileFrame.state().get('selection').first().toJSON();
+            fileInput.val(attachment.id);
             
-            // Formatear la información a mostrar
-            var info_html = '<p>Archivo seleccionado: <a href="' + attachment.url + '" target="_blank">' + attachment.filename + '</a></p>';
-            info_html += '<p>Tipo: ' + attachment.subtype.toUpperCase() + '</p>';
-            if ( attachment.filesizeInBytes ) {
-                var formattedSize = wp.media.utils ? wp.media.utils.filesize( attachment.filesizeInBytes ) : attachment.filesizeInBytes;
-                info_html += '<p>Tamaño: ' + formattedSize + '</p>';
+            let fileSize = attachment.filesizeInBytes;
+            if (wp.media.utils) {
+                fileSize = wp.media.utils.filesize(fileSize);
             }
-            $('#gsl_archivo_info').html( info_html );
+
+            fileInfo.html(`
+                <p>Archivo seleccionado: <a href="${attachment.url}" target="_blank">${attachment.filename}</a></p>
+                <p>Tipo: ${attachment.subtype.toUpperCase()}</p>
+                ${fileSize ? `<p>Tamaño: ${fileSize}</p>` : ''}
+            `);
             $('#gsl_remove_archivo').show();
         });
-        
-        frame.open();
+
+        fileFrame.open();
     });
-    
-    // Botón para eliminar el archivo seleccionado
+
     $('#gsl_remove_archivo').on('click', function(e) {
         e.preventDefault();
-        $('#gsl_documento_attachment_id').val('');
-        $('#gsl_archivo_info').html('<p>Ningún archivo seleccionado.</p>');
+        fileInput.val('');
+        fileInfo.html('<p>Ningún archivo seleccionado.</p>');
         $(this).hide();
     });
-    
-    // -----------------------------------------------------------
-    // Media uploader para seleccionar imagen (Imagen del Cliente)
-    // -----------------------------------------------------------
-    var mediaUploader;
-    
+
+    // ==============================================
+    // Uploader para Imágenes (Cliente)
+    // ==============================================
+    let imageFrame;
+    const imageInput = $('#gsl_imagen_cliente');
+    const imagePreview = $('#gsl_imagen_cliente_preview');
+
     $('#gsl_upload_image_button').on('click', function(e) {
         e.preventDefault();
-        // Si el uploader ya existe, se reabre
-        if ( mediaUploader ) {
-            mediaUploader.open();
+        
+        if (imageFrame) {
+            imageFrame.open();
             return;
         }
-        // Crear el frame del media uploader para imágenes
-        mediaUploader = wp.media({
+
+        imageFrame = wp.media({
             title: 'Selecciona una imagen',
             button: { text: 'Usar esta imagen' },
             multiple: false
         });
-        
-        // Al seleccionar una imagen, se guarda el ID y se muestra el preview
-        mediaUploader.on('select', function() {
-            var attachment = mediaUploader.state().get('selection').first().toJSON();
-            $('#gsl_imagen_cliente').val( attachment.id );
-            
-            // Usar el tamaño thumbnail si está disponible
-            var thumb = ( attachment.sizes && attachment.sizes.thumbnail ) ? attachment.sizes.thumbnail.url : attachment.url;
-            $('#gsl_imagen_cliente_preview').html('<img src="' + thumb + '" style="max-width:150px;" />');
+
+        imageFrame.on('select', () => {
+            const attachment = imageFrame.state().get('selection').first().toJSON();
+            imageInput.val(attachment.id);
+            const thumb = attachment.sizes?.thumbnail?.url || attachment.url;
+            imagePreview.html(`<img src="${thumb}" style="max-width:150px;" />`);
         });
-        
-        mediaUploader.open();
+
+        imageFrame.open();
     });
-    
-    // Botón para eliminar la imagen seleccionada
+
     $('#gsl_remove_image_button').on('click', function(e) {
         e.preventDefault();
-        $('#gsl_imagen_cliente').val('');
-        $('#gsl_imagen_cliente_preview').html('');
+        imageInput.val('');
+        imagePreview.html('');
     });
 });
 
 
-/* QR PDF*/
+/**********************************************
+ * GENERACIÓN DE QR (PDF, PNG Y SOLO QR)
+ **********************************************/
 jQuery(document).ready(function($) {
-    // Detectar cuando el usuario hace clic en el botón de "Generar PDF"
+    // ==============================================
+    // Configuración Común
+    // ==============================================
+    const qrContainer = '#gsl-qr-container';
+    const qrElement = '.gsl-qr-code';
+    const postTitleElement = '.gsl-post-title';
+
+    /**
+     * Obtiene el título del post formateado para nombre de archivo
+     */
+    function getFormattedTitle() {
+        let title = $(postTitleElement).text().trim() || 'QR';
+        return title.replace(/[^a-zA-Z0-9-_]/g, '_');
+    }
+
+    // ==============================================
+    // Generación de PDF
+    // ==============================================
     $('.gsl-generate-pdf-btn').on('click', function(e) {
-        e.preventDefault(); // Evita que el botón realice su acción por defecto (como recargar la página)
-
-        console.log('Generar PDF: botón clickeado'); // Mensaje en la consola para depuración
-
-        // Selecciona el contenedor que queremos convertir en PDF
-        var element = document.getElementById('gsl-qr-container');
-        if (!element) { // Si no se encuentra el contenedor, muestra un error y detiene el proceso
-            console.error('No se encontró el contenedor #gsl-qr-container');
-            return;
-        }
-
-        // Obtiene el título del post desde el elemento oculto con la clase 'gsl-post-title'
-        var postTitle = $('.gsl-post-title').text().trim(); // Elimina espacios extra antes y después del título
-        if (!postTitle) {
-            postTitle = 'QR'; // Si no hay título disponible, usa "QR" como nombre por defecto
-        }
-
-        // Reemplaza caracteres no válidos en el nombre del archivo (evita problemas al guardar)
-        postTitle = postTitle.replace(/[^a-zA-Z0-9-_]/g, '_');
-
-        // Captura el contenedor en una imagen usando html2canvas con una mayor escala para mejor calidad
-        html2canvas(element, { scale: 4 }).then(function(canvas) {
-            // Convierte la imagen del canvas a formato PNG
-            var imgData = canvas.toDataURL('image/png');
-
-            // Inicializa jsPDF para crear un nuevo documento en formato A4 (210x297 mm)
-            const { jsPDF } = window.jspdf;
-            var pdf = new jsPDF('p', 'mm', 'a4'); // 'p' = orientación vertical, 'mm' = unidad de medida, 'a4' = tamaño de página
-
-            // Obtiene el ancho de la página del PDF
-            var pageWidth = pdf.internal.pageSize.getWidth();
-            
-            // Define el ancho de la imagen en el PDF (% del ancho total)
-            var pdfWidth = pageWidth * 0.5;
-            
-            // Calcula la altura de la imagen para mantener la proporción original
-            var pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-            
-
-            // Establece el margen izquierdo en 10 (o cualquier valor que desees)
-            /* Centrado
-            var xMargin = (pageWidth - pdfWidth) / 2;
-            */
-            var xMargin = 5;
-            
-            // Ajusta la coordenada y para mover la imagen más abajo (por ejemplo, y = 20)
-            var yMargin = 5; 
-
-            // Agrega la imagen al PDF en posición (x, y) con tamaño ajustado
-            pdf.addImage(imgData, 'PNG', xMargin, yMargin, pdfWidth, pdfHeight);
-
-            // Guarda el archivo PDF con el nombre "QR_TituloDelPost.pdf"
-            pdf.save('QR_' + postTitle + '.pdf');
-        }).catch(function(error) {
-            console.error('Error al generar PDF:', error); // Mensaje de error en caso de fallo
-        });
-    });
-});
-
-/* QR PNG*/
-/* PNG */
-jQuery(document).ready(function($) {
-    // Detectar cuando el usuario hace clic en el botón de "Generar PNG"
-    $('.gsl-generate-png-btn').on('click', function(e) {
-        e.preventDefault(); // Evita la acción por defecto del botón
-        console.log('Generar PNG: botón clickeado'); // Mensaje en la consola para depuración
-
-        // Selecciona el contenedor que queremos convertir en imagen PNG
-        var element = document.getElementById('gsl-qr-container');
+        e.preventDefault();
+        const element = document.querySelector(qrContainer);
+        
         if (!element) {
-            console.error('No se encontró el contenedor #gsl-qr-container');
+            console.error('Contenedor QR no encontrado');
+            return;
+        }
+        
+        html2canvas(element, { scale: 4 }).then(canvas => {
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            const pdfWidth = pageWidth * 0.5;
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+            
+            // Agregar la imagen del canvas
+            pdf.addImage(canvas, 'PNG', 5, 5, pdfWidth, pdfHeight);
+            
+            // URL a la que se vincularán los textos "etiqueta A" y "etiqueta B"
+            const linkUrl = gsl_vars.pdfLinkUrl; // Accede a la variable localizada
+            
+            // Configurar el tamaño de fuente a 8 pts
+            pdf.setFontSize(8);
+            
+            const margin = 10; // margen en milímetros
+            const lineHeight = 7;
+            // Posición vertical para la primera línea (se ubica dejando 10mm del borde inferior en la última línea)
+            const startY = pageHeight - margin - lineHeight;
+            
+            // --- Primera línea ---
+            
+            const line1Part1 = "Los productos que por su geometría o tamaño no puedan cumplir con las dimensiones mínimas de diseño señaladas en  "; 
+            const line1Link = "etiqueta A";
+            const line1Part2 = ";"; // parte final de la línea
+            
+            // Escribe la parte previa
+            pdf.text(line1Part1, margin, startY);
+            const widthPart1 = pdf.getTextWidth(line1Part1);
+            
+            // Configura el color azul para el enlace
+            pdf.setTextColor(0, 0, 255);
+            // Agrega el enlace con opción target (la apertura en nueva ventana depende del lector de PDF)
+            pdf.textWithLink(line1Link, margin + widthPart1, startY, { url: linkUrl, target: '_blank' });
+            const widthLink1 = pdf.getTextWidth(line1Link);
+            
+            // Dibuja una línea debajo del texto del enlace para simular subrayado
+            const underlineY = startY + 1; // 1mm por debajo de la línea base
+            pdf.setLineWidth(0.1);
+            pdf.line(margin + widthPart1, underlineY, margin + widthPart1 + widthLink1, underlineY);
+            
+            // Restaura el color negro para el resto del texto
+            pdf.setTextColor(0, 0, 0);
+            // Agrega la parte final de la primera línea
+            pdf.text(line1Part2, margin + widthPart1 + widthLink1, startY);
+            
+            // --- Segunda línea ---
+            const line2Part1 = "podrán ser marcados con una etiqueta más pequeña, cuyas dimensiones no podrán ser inferiores a la  ";
+            const line2Link = "etiqueta B.";
+            const startY2 = startY + lineHeight;
+            
+            pdf.text(line2Part1, margin, startY2);
+            const widthPart2 = pdf.getTextWidth(line2Part1);
+            
+            pdf.setTextColor(0, 0, 255);
+            pdf.textWithLink(line2Link, margin + widthPart2, startY2, { url: linkUrl, target: '_blank' });
+            const widthLink2 = pdf.getTextWidth(line2Link);
+            const underlineY2 = startY2 + 1;
+            pdf.setLineWidth(0.1);
+            pdf.line(margin + widthPart2, underlineY2, margin + widthPart2 + widthLink2, underlineY2);
+            
+            pdf.setTextColor(0, 0, 0);
+            
+            pdf.save(`QR_${getFormattedTitle()}.pdf`);
+        }).catch(console.error);
+    });
+    
+    
+
+    // ==============================================
+    // Generación de PNG
+    // ==============================================
+    $('.gsl-generate-png-btn').on('click', function(e) {
+        e.preventDefault();
+        const element = document.querySelector(qrContainer);
+        
+        if (!element) {
+            console.error('Contenedor QR no encontrado');
             return;
         }
 
-        // Obtiene el título del post desde el elemento oculto con la clase 'gsl-post-title'
-        var postTitle = $('.gsl-post-title').text().trim();
-        if (!postTitle) {
-            postTitle = 'QR'; // Si no hay título disponible, usa "QR" por defecto
-        }
-        // Reemplaza caracteres no válidos en el nombre del archivo
-        postTitle = postTitle.replace(/[^a-zA-Z0-9-_]/g, '_');
-
-        // Captura el contenedor en una imagen usando html2canvas con una mayor escala para mejor calidad
-        html2canvas(element, { scale: 4 }).then(function(canvas) {
-            // Convierte la imagen del canvas a formato PNG
-            var imgData = canvas.toDataURL('image/png');
-
-            // Crea un enlace temporal para descargar la imagen
-            var link = document.createElement('a');
-            link.href = imgData;
-            link.download = 'QR_' + postTitle + '.png';
-
-            // Simula un clic en el enlace para iniciar la descarga
-            document.body.appendChild(link);
-            link.click();
+        html2canvas(element, { scale: 4 }).then(canvas => {
+            const link = document.createElement('a');
+            link.href = canvas.toDataURL('image/png');
+            link.download = `QR_${getFormattedTitle()}.png`;
+            document.body.appendChild(link).click();
             document.body.removeChild(link);
-        }).catch(function(error) {
-            console.error('Error al generar PNG:', error);
-        });
+        }).catch(console.error);
+    });
+
+    // ==============================================
+    // Descarga de QR Solo
+    // ==============================================
+    $('.gsl-download-qr-solo-btn').on('click', function(e) {
+        e.preventDefault();
+        const element = document.querySelector(qrElement);
+        
+        if (!element) {
+            console.error('Elemento QR no encontrado');
+            return;
+        }
+
+        html2canvas(element, { scale: 4 }).then(canvas => {
+            const link = document.createElement('a');
+            link.href = canvas.toDataURL('image/png');
+            link.download = `QR_Solo_${getFormattedTitle()}.png`;
+            document.body.appendChild(link).click();
+            document.body.removeChild(link);
+        }).catch(console.error);
     });
 });
-
-
-
-

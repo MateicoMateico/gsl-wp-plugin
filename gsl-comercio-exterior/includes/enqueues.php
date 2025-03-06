@@ -95,6 +95,13 @@ function gsl_enqueue_documentos_assets() {
         '1.0',
         true
     );
+    
+    // Pasar la variable PHP a JS (agrega esto)
+    wp_localize_script('gsl-custom-js', 'gsl_vars', [
+        'ajaxurl'    => admin_url('admin-ajax.php'),
+        'nonce'      => wp_create_nonce('gsl_documentos_nonce'),
+        'pdfLinkUrl' => plugin_dir_url(dirname(__FILE__)) . 'assets/docs/QR_Medidas_Ejemplo.pdf' // Nueva variable
+    ]);
 }
 add_action('wp_enqueue_scripts', 'gsl_enqueue_documentos_assets');
 

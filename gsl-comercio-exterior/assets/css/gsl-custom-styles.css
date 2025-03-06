@@ -1,11 +1,18 @@
-
+/*==========================================================
+  IMPORTACIÓN DE FUENTES
+==========================================================*/
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
 
 
-/*------------------------------*/
-/* Single Producto*/ 
-/*------------------------------*/
-/* Grid Docs relacionados*/
+/*==========================================================
+  SINGLE PRODUCTO
+  (Estilos para la vista de producto individual)
+==========================================================*/
+
+/*----------------------------------------------------------
+  Documentos Relacionados - Grid y Documentos
+----------------------------------------------------------*/
+/* Grid para los documentos relacionados */
 .gsl-documentos-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -13,17 +20,26 @@
     padding: 20px;
 }
 
+/* Caja individual del documento */
 .gsl-documento-box {
     border-radius: 10px;
     border: 3px solid #b3b3b3;
     padding: 20px;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+    text-align: center;
 }
 
 .gsl-documento-box:hover {
     transform: translateY(-5px);
     border: 3px solid #565c6b;
 }
+
+.gsl-documento-box .documento-icono {
+    display: block;
+    margin: 0 auto;
+}
+
+/* Enlace completo del documento (sin decoración y con herencia de color) */
 
 .documento-link {
     text-decoration: none;
@@ -32,12 +48,14 @@
     outline: none; /* Evita el recuadro */
 }
 
+/* Título del documento */
 .documento-titulo {
     font-size: 18px;
     font-weight: bold;
     margin-bottom: 10px;
 }
 
+/* Meta información del documento */
 .documento-meta span {
     display: block;
     font-size: 14px;
@@ -45,29 +63,54 @@
     margin-bottom: 5px;
 }
 
-/* Datos Producto*/
+/*----------------------------------------------------------
+    Modelos Producto
+----------------------------------------------------------*/
+
+.gsl-modelos-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+.gsl-modelo-box {
+    background: #f7f7f7;
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 5px;
+    flex: 1 1 200px;
+    text-align: center;
+}
+.gsl-modelo-texto {
+    font-size: 1em;
+    margin: 0;
+}
+/*----------------------------------------------------------
+  Datos del Producto y Vista Previa del QR
+----------------------------------------------------------*/
+/* Texto de datos del producto */
 .gsl-datos-producto-texto {
-    font-size:18px;
+    font-size: 18px;
 }
 
-/* Vista Previa QR*/
+/* Contenedor para la vista previa del QR y datos */
 .single-product_col-datos-producto {
-    background:#F5F5F5;
+    background: #F5F5F5;
     border-radius: 10px;
     padding: 20px;
 }
-.single-product_col-qr{
-    font-size:18px;
-    text-align:center;
+
+/* Columna específica para el QR */
+.single-product_col-qr {
+    font-size: 18px;
+    text-align: center;
 }
 
 
-
-/* QR Y elementos*/
-
-
-  /* Contenedor principal */
-  #gsl-qr-container {
+/*===============================================
+  CONTENEDOR PRINCIPAL DEL QR
+===============================================*/
+#gsl-qr-container {
+    scale: 0.9;
     text-align: center;
     width: 300px;
     height: 410px;
@@ -75,119 +118,154 @@
     padding: 0;
     border: 2px solid #000000;
     border-radius: 20px;
-  }
-  /* Codigo Qr*/
-  .gsl-qr-code img{
+}
+
+.gsl-qr-code img {
     width: 100% !important;
 }
 
-  /* Sección inferior en dos columnas */
-  .gsl-qr-bottom {
+/* Sección Inferior del QR (dos columnas) */
+.gsl-qr-bottom {
     display: flex;
     justify-content: center;
     align-items: center;
     padding: 10px;
     margin-top: -4em;
 }
-  .gsl-qr-text-column {
-  width: 100%;
-  }
-/* AR */
+
+.gsl-qr-text-column {
+    width: 100%;
+}
+
 p.gsl-qr-text {
     font-family: 'Montserrat';
     font-size: 100px;
     font-weight: 600;
     margin: 0;
-    
+    color: black;
 }
-  /* TICS */
-  .gsl-qr-image-column img {
+
+.gsl-qr-image-column img {
     max-width: 80%;
     height: auto;
     margin-left: -2em;
-  }
+}
 
-
-
-  /* Botones div*/
-  .gsl-qr-download-container{
+/*===============================================
+  SECCIÓN DE DESCARGAS
+===============================================*/
+.gsl-qr-download-container {
     display: flex; 
     flex-direction: column;
     align-items: center; 
     gap: 15px;
-    margin: 0 3vw;
-  }
-  /* Botones descarga PDF y PNG*/
+    margin: 0;
+    margin-top: 20px; /* Un poco de separación respecto al QR */
+}
 
-  .gsl-qr-download-types{
+/* Título "DESCARGAS" */
+.gsl-downloads-title {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1em;
+    font-weight: 600;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Fila de los 3 botones: PDF, PNG, SOLO QR */
+.gsl-qr-download-types {
     width: 100%;
-    display: flex; 
+    display: flex;
+    justify-content: center; 
     gap: 10px; 
-    margin-top: 20px;
-  }
-  /* Botón de generación de PDF */
-  .gsl-generate-pdf-btn {
-    width: 50%;
+    margin-top: 10px;
+}
+
+/*-----------------------------------------------
+  Botones (PDF, PNG, SOLO QR)
+-----------------------------------------------*/
+.gsl-generate-pdf-btn,
+.gsl-generate-png-btn,
+.gsl-download-qr-solo-btn {
+    /*flex: 1;*/
     transition: all 0.3s ease;
-    padding:   10px;
+    padding: 10px 20px;
     font-family: 'Montserrat', sans-serif;
-    font-size: 0.9em;
+    font-size: 0.8em;
+    font-weight: 600;
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* PDF -> rojo */
+.gsl-generate-pdf-btn {
     background-color: #ec1616;
-    color: #fff;
-    border: none;
-    border-radius: 3px;
-    cursor: pointer;
-  }
-  .gsl-generate-pdf-btn:hover {
-    background-color: rgba(119, 0, 0, 0.664);
-  }
-  /* Botón de generación de PNG */
-  .gsl-generate-png-btn {
-    width: 50%;
-    transition: all 0.3s ease;
-    padding: 10px;
+}
+.gsl-generate-pdf-btn:hover {
+    background-color: rgba(119, 0, 0, 0.7);
+}
+
+/* PNG -> azul oscuro */
+.gsl-generate-png-btn {
+    background-color: #1b449c;
+}
+.gsl-generate-png-btn:hover {
+    background-color: #1b449cbe;
+}
+
+/* SOLO QR -> celeste */
+.gsl-download-qr-solo-btn {
+    background-color: #2eb2ff; 
+}
+.gsl-download-qr-solo-btn:hover {
+    background-color: #2eb2ffbd;
+}
+
+/*-----------------------------------------------
+  Enlace "Ver medidas de ejemplo"
+-----------------------------------------------*/
+.gsl-qr-medidas-link {
+    margin-top: 5px;
+    font-weight: 400;
+}
+
+.gsl-download-qr-ejemplo {
     font-family: 'Montserrat', sans-serif;
     font-size: 0.9em;
-    background-color: #0073aa;
-    color: #fff;
-    border: none;
-    border-radius: 3px;
-    cursor: pointer;
-  }
-  .gsl-generate-png-btn:hover {
-    background-color: #005177;
-  }
+    color: #333;
+    text-decoration: underline;
+}
+.gsl-download-qr-ejemplo:hover {
+    color: #0073aa;
+}
 
-
-    /* Botón QR Ejemplo */
-
- .gsl-qr-medidas{
-        width: 100%;
+/* Ajuste de margen en pantallas muy anchas (desktop grande) */
+@media screen and (min-width: 1600px) {
+    .gsl-qr-download-container {
+        margin: 0;
     }
-  .gsl-download-qr-ejemplo{
-    width: 100%;
-        transition: all 0.3s ease;
-        padding: 10px;
-        font-family: 'Montserrat', sans-serif;
-        font-size: 0.9em;
-        background-color: #00aa55;
-        color: #fff;
-        border: none;
-        border-radius: 3px;
-        cursor: pointer;
-      }
-      .gsl-generate-qr-ejemplo:hover {
-        background-color: #00aa55c0;
-    }
-/*------------------------------*/
-/* Single Documento*/ 
-/*------------------------------*/
+}
+
+
+/*==========================================================
+  SINGLE DOCUMENTO
+  (Estilos para documentos individuales)
+==========================================================*/
 .gsl-documento-relacionado {
     padding: 15px;
     margin: 10px 0;
     border-radius: 5px;
     text-align: center;
 }
+
+/* Botón general para documentos */
 .gsl-boton {
     display: inline-block;
     padding: 10px 20px;
@@ -201,54 +279,18 @@ p.gsl-qr-text {
     background: #005177;
 }
 
-/*------------------------------*/
-/* Login */
-/*------------------------------*/
-div#acceso-clientes-col-1 {
-    display:flex;
-    flex-direction:column;
-    justify-content:space-between;
-}
-/* Boton */
-div#acceso-clientes-col-1 .login-submit input#wppb-submit {
-    background: #3db2ff;
-    width:100%;
-}
-/*Form*/
-/* ============================
-  Mobile (hasta 767px )
-   ============================ */
-@media screen and (max-width: 767px) {
-  
-}
-/* ============================
-   Tablet (de 768px a 1023px)
-   ============================ */
-@media screen and (min-width: 768px) and (max-width: 1023px){
-    .ticss-02870865{
-        flex-direction: column;
-    }
-}
+/*==========================================================
+  SHORTCODE: PRODUCTOS RELACIONADOS A CLIENTE
+==========================================================*/
 
-
-/* ============================
-   Desktop (desde 1024px en adelante)
-============================ */
-   @media screen and (min-width: 1024px) {
-    div#acceso-clientes-loginform {
-        margin: 0 20%;
-    }
-}
-
-
-/*--------------------------------------------------*/
-/* Shortcode Productos Relacionados a Cliente*/
-/*--------------------------------------------------*/
+/* Contenedor para cajas de productos relacionados */
 .gsl-productos-relacionados-boxes {
     display: flex;
     flex-wrap: wrap;
     gap: 20px;
 }
+
+/* Caja individual de producto */
 .gsl-producto-box {
     border: 1px solid #ccc;
     border-radius: 10px;
@@ -256,12 +298,16 @@ div#acceso-clientes-col-1 .login-submit input#wppb-submit {
     width: calc(50% - 20px); 
     box-sizing: border-box;
 }
+
+/* Imagen del producto */
 .gsl-producto-imagen img {
     max-width: 100%;
     height: auto;
     display: block;
     margin-bottom: 10px;
 }
+
+/* Botón para ver el producto */
 .gsl-ver-producto {
     display: inline-block;
     padding: 8px 12px;
@@ -275,85 +321,219 @@ div#acceso-clientes-col-1 .login-submit input#wppb-submit {
 }
 
 
+/*==========================================================
+  DOCUMENTOS RELACIONADOS (Dual List)
+==========================================================*/
 
-/* Documentos Relacionados*/
-/* Contenedor principal */
+/*----------------------------------------------------------
+  Contenedor principal para listas duales
+----------------------------------------------------------*/
 #dual-list-container {
-  display: flex;
-  gap: 20px;
-  margin: 20px 0;
+    display: flex;
+    gap: 20px;
+    margin: 20px 0;
 }
 
-/* Estilos para cada lista */
+/* Cada recuadro de lista */
 .list-box {
-  flex: 1;
-  border: 1px solid #ccc;
-  background: #f9f9f9;
-  border-radius: 4px;
-  padding: 10px;
+    flex: 1;
+    border: 1px solid #ccc;
+    background: #f9f9f9;
+    border-radius: 4px;
+    padding: 10px;
 }
 
-/* Títulos de cada sección */
+/* Títulos de cada lista */
 .list-box h4 {
-  margin-top: 0;
-  text-align: center;
-  font-size: 1.1em;
-  color: #333;
+    margin-top: 0;
+    text-align: center;
+    font-size: 1.1em;
+    color: #333;
 }
 
-/* Input de búsqueda */
+/* Input de búsqueda en la lista "unassigned" */
 #unassigned-box input[type="text"] {
-  width: 100%;
-  padding: 8px;
-  margin-bottom: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
 }
 
-/* Listas sin estilo de lista */
+/* Lista sin estilo (sin bullets) */
 .list-box ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  min-height: 200px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    min-height: 200px;
 }
 
-/* Estilos para cada elemento de la lista */
+/* Elementos individuales de la lista */
 .list-box li {
-  background: #fff;
-  padding: 8px 10px;
-  margin-bottom: 5px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  cursor: move;
-  transition: background 0.3s;
+    background: #fff;
+    padding: 8px 10px;
+    margin-bottom: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: move;
+    transition: background 0.3s;
 }
 
 .list-box li:hover {
-  background: #f0f0f0;
+    background: #f0f0f0;
 }
 
-/* Controles de paginación */
+/*----------------------------------------------------------
+  Controles de paginación para las listas
+----------------------------------------------------------*/
 #pagination-controls {
-  text-align: center;
-  margin-top: 10px;
+    text-align: center;
+    margin-top: 10px;
 }
 
 #pagination-controls button {
-  padding: 5px 10px;
-  border: none;
-  background: #0073aa;
-  color: #fff;
-  border-radius: 3px;
-  cursor: pointer;
+    padding: 5px 10px;
+    border: none;
+    background: #0073aa;
+    color: #fff;
+    border-radius: 3px;
+    cursor: pointer;
 }
 
 #pagination-controls button:disabled {
-  background: #ccc;
-  cursor: default;
+    background: #ccc;
+    cursor: default;
 }
 
 #pagination-controls span {
-  padding: 0 10px;
-  font-weight: bold;
+    padding: 0 10px;
+    font-weight: bold;
+}
+
+
+/*----------------------------------------------------------
+    Mis Productos
+----------------------------------------------------------*/
+.gsl-productos-search-form {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.gsl-productos-search-form input[type="text"] {
+    padding: 8px;
+    width: 250px;
+    max-width: 100%;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-right: 10px;
+    font-size: 14px;
+}
+
+.gsl-productos-search-form button {
+    padding: 8px 15px;
+    border: none;
+    background-color: #0073aa;
+    color: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.gsl-productos-search-form button:hover {
+    background-color: #006799;
+}
+
+.gsl-productos-search-form a {
+    margin-left: 10px;
+    color: #0073aa;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.gsl-productos-search-form a:hover {
+    text-decoration: underline;
+}
+
+.gsl-productos-relacionados-boxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+}
+
+.gsl-producto-box {
+    border: 1px solid #ddd;
+    padding: 15px;
+    width: 300px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    border-radius: 4px;
+    background: #fff;
+    transition: box-shadow 0.3s ease;
+}
+
+.gsl-producto-box:hover {
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+.gsl-producto-imagen {
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.gsl-producto-imagen img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+}
+
+.gsl-producto-detalle p {
+    margin: 5px 0;
+    font-size: 18px;
+    color: #333;
+}
+
+.gsl-producto-detalle a.button {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 8px 12px;
+    background-color: #0073aa;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.gsl-producto-detalle a.button:hover {
+    background-color: #006799;
+}
+
+.gsl-pagination {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.gsl-pagination ul {
+    list-style: none;
+    padding: 0;
+    display: inline-block;
+}
+
+.gsl-pagination li {
+    display: inline-block;
+    margin: 0 5px;
+}
+
+.gsl-pagination a,
+.gsl-pagination span {
+    display: block;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    color: #0073aa;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.gsl-pagination a:hover {
+    background-color: #f0f0f0;
 }

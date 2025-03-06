@@ -195,27 +195,89 @@ add_action('save_post_producto', 'gsl_guardar_meta_cliente');
 /**
  * Renderizar Metabox: Modelo 
  */
-function gsl_render_metabox_modelo($post)
-{
-    $modelo = get_post_meta($post->ID, '_gsl_producto_modelo', true);
-    echo '<label for="gsl_producto_modelo">' . __('Ingrese el Modelo:', 'gsl') . '</label>';
-    echo '<input type="text" id="gsl_producto_modelo" name="gsl_producto_modelo" value="' . esc_attr($modelo) . '" style="width:100%;" />';
+function gsl_render_metabox_modelo($post) {
+    // Recuperar los modelos almacenados; asegurarse de que sea un array
+    $modelos = get_post_meta($post->ID, '_gsl_producto_modelo', true);
+    if (!is_array($modelos)) {
+        $modelos = array();
+    }
+    ?>
+    <div id="gsl-modelos-container">
+        <?php if (!empty($modelos)) : ?>
+            <?php foreach ($modelos as $index => $modelo) : ?>
+                <div class="gsl-modelo-field">
+                    <label for="gsl_producto_modelo_<?php echo $index; ?>">
+                        <?php _e('Ingrese el Modelo:', 'gsl'); ?>
+                    </label>
+                    <input type="text" id="gsl_producto_modelo_<?php echo $index; ?>" name="gsl_producto_modelo[]" value="<?php echo esc_attr($modelo); ?>" />
+                    <a href="#" class="remove-modelo">
+                        <span class="dashicons dashicons-trash" style="color:red;"></span>
+                    </a>
+                </div>
+            <?php endforeach; ?>
+        <?php endif; ?>
+    </div>
+    <button type="button" id="add-modelo"><?php _e('Agregar Modelo', 'gsl'); ?></button>
+    <script type="text/javascript">
+    (function($) {
+        $('#add-modelo').on('click', function(e) {
+            e.preventDefault();
+            var count = $('#gsl-modelos-container .gsl-modelo-field').length;
+            var newField = '<div class="gsl-modelo-field">' +
+                '<label for="gsl_producto_modelo_' + count + '"><?php _e("Ingrese el Modelo:", "gsl"); ?></label>' +
+                '<input type="text" id="gsl_producto_modelo_' + count + '" name="gsl_producto_modelo[]" value="" />' +
+                '<a href="#" class="remove-modelo">' +
+                    '<span class="dashicons dashicons-trash" style="color:red;"></span>' +
+                '</a>' +
+                '</div>';
+            $('#gsl-modelos-container').append(newField);
+        });
+        $('#gsl-modelos-container').on('click', '.remove-modelo', function(e) {
+            e.preventDefault();
+            $(this).closest('.gsl-modelo-field').remove();
+        });
+    })(jQuery);
+    </script>
+    <style>
+        .gsl-modelo-field {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .gsl-modelo-field label {
+            margin-right: 10px;
+            white-space: nowrap;
+        }
+        .gsl-modelo-field input {
+            flex: 1;
+            margin-right: 10px;
+        }
+    </style>
+    <?php
 }
 
 /**
  * Guardar Metadatos: Modelo
  */
-function gsl_guardar_meta_modelo($post_id)
-{
-    if (!current_user_can('edit_post', $post_id)) {
+function gsl_guardar_meta_modelo($post_id) {
+    if (!current_user_can('edit_post', $post_id) || defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
         return;
     }
+
+    // Solo procesar si el campo está presente en el POST (evitar borrado en Quick Edit)
     if (isset($_POST['gsl_producto_modelo'])) {
-        $modelo = sanitize_text_field($_POST['gsl_producto_modelo']);
-        update_post_meta($post_id, '_gsl_producto_modelo', $modelo);
+        $modelos = array();
+        foreach ($_POST['gsl_producto_modelo'] as $modelo) {
+            $modelo = sanitize_text_field($modelo);
+            if (!empty($modelo)) {
+                $modelos[] = $modelo;
+            }
+        }
+        update_post_meta($post_id, '_gsl_producto_modelo', $modelos);
     }
 }
 add_action('save_post_producto', 'gsl_guardar_meta_modelo');
+
 
 /**
  * Renderizar Metabox: Código
@@ -316,3 +378,5 @@ function gsl_guardar_meta_archivo($post_id)
     }
 }
 add_action('save_post_documento', 'gsl_guardar_meta_archivo');
+
+

@@ -6,7 +6,6 @@
 
 // Agregar columnas personalizadas para productos
 function gsl_add_producto_columns($columns) {
-    $columns['gsl_modelo'] = __('Modelo', 'gsl');
     $columns['gsl_codigo'] = __('Código', 'gsl');
     $columns['gsl_cliente_relacionado'] = __('Cliente Relacionado', 'gsl');
     $columns['gsl_documentos_relacionados'] = __('Documentos Relacionados', 'gsl');
@@ -36,11 +35,6 @@ function gsl_render_producto_columns($column, $post_id) {
         } else {
             echo __('No relacionados', 'gsl');
         }
-    }
-
-    if ($column === 'gsl_modelo') {
-        $modelo = get_post_meta($post_id, '_gsl_producto_modelo', true); // Usando el metadato definido en el metabox
-        echo $modelo ? esc_html($modelo) : __('NA', 'gsl');
     }
 
     if ($column === 'gsl_codigo') {
