@@ -182,7 +182,7 @@ function gsl_productos_relacionados_cliente_shortcode($atts) {
     // Construir argumentos para WP_Query
     $query_args = array(
         'post_type'      => 'producto',
-        'posts_per_page' => 9, // ajusta el número de productos por página según necesites
+        'posts_per_page' => 12, // ajusta el número de productos por página según necesites
         'paged'          => $paged,
         'meta_query'     => array(
             array(
@@ -204,7 +204,7 @@ function gsl_productos_relacionados_cliente_shortcode($atts) {
     $output = $form;
 
     if ( ! $query->have_posts() ) {
-        $output .= '<p>' . __( 'No tienes productos relacionados.', 'gsl' ) . '</p>';
+        $output .= '<p style="text-align:center;margin: 10px;">' . __( 'No tienes productos relacionados.', 'gsl' ) . '</p>';
     } else {
         $output .= '<div class="gsl-productos-relacionados-boxes">';
         while ( $query->have_posts() ) {

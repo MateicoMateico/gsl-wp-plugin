@@ -70,19 +70,38 @@
 .gsl-modelos-grid {
     display: flex;
     flex-wrap: wrap;
-    gap: 15px;
+    gap: 10px;
+    
 }
+
 .gsl-modelo-box {
     background: #f7f7f7;
     border: 1px solid #ddd;
-    padding: 10px;
     border-radius: 5px;
-    flex: 1 1 200px;
     text-align: center;
+    width: calc(33.333% - 14px); /* 3 por fila con gap */
+    box-sizing: border-box;
 }
-.gsl-modelo-texto {
-    font-size: 1em;
-    margin: 0;
+.gsl-modelo-texto{
+margin: 10px;
+}
+
+/* Si hay solo un elemento en una fila, ocupa el 33.33% */
+.gsl-modelos-grid:has(.gsl-modelo-box:nth-child(1):nth-last-child(1)) .gsl-modelo-box {
+    width: 33.333%;
+}
+
+/* Responsivo */
+@media (max-width: 1024px) {
+    .gsl-modelo-box {
+        width: calc(50% - 10px); /* 2 por fila */
+    }
+}
+
+@media (max-width: 768px) {
+    .gsl-modelo-box {
+        width: 100%; /* 1 por fila */
+    }
 }
 /*----------------------------------------------------------
   Datos del Producto y Vista Previa del QR
@@ -288,6 +307,7 @@ p.gsl-qr-text {
     display: flex;
     flex-wrap: wrap;
     gap: 20px;
+    margin: 10px !important;
 }
 
 /* Caja individual de producto */
@@ -506,6 +526,33 @@ p.gsl-qr-text {
 .gsl-producto-detalle a.button:hover {
     background-color: #006799;
 }
+
+
+.gsl-productos-relacionados-boxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin: 20px;
+}
+
+.gsl-producto-box {
+    width: calc(33.333% - 14px); /* 3 por fila considerando el gap */
+    box-sizing: border-box;
+}
+
+/* Responsivo */
+@media (max-width: 1024px) {
+    .gsl-producto-box {
+        width: calc(50% - 10px); /* 2 por fila */
+    }
+}
+
+@media (max-width: 768px) {
+    .gsl-producto-box {
+        width: 100%; /* 1 por fila */
+    }
+}
+
 
 .gsl-pagination {
     margin-top: 20px;
